@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>سجل أوزان النادي | متتبع التطور والأوزان</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Cairo', 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .num-font {
+      font-family: 'Inter', 'Cairo', sans-serif;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    .tab-active {
+      color: #10b981;
+      border-color: #10b981;
+      background-color: rgba(16, 185, 129, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 md:pb-10 selection:bg-emerald-500 selection:text-white">
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h2m14 0h2M6 7v6m12-6v6M8 5v10m8-10v10M8 10h8" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-extrabold text-white tracking-tight">أوزاني بالنادي</h1>
+          <p class="text-xs text-slate-400">تتبع الأوزان والتطور العضلي بوضوح</p>
+        </div>
+      </div>
+
+      <!-- Rest Timer & Unit Toggle -->
+      <div class="flex items-center gap-2">
+        <button id="unitToggleBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-emerald-400 transition">
+          الوحدة: <span id="currentUnitLabel">كجم (KG)</span>
+        </button>
+        <button id="restTimerToggleBtn" type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-amber-400 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span id="headerTimerText">مؤقت الراحة</span>
+        </button>
+        <button id="openMobileGuideBtn" type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
+          <span>📲 تشغيل بالجوال</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Rest Timer Bar -->
+    <div id="restTimerBar" class="hidden max-w-5xl mx-auto mt-3 pt-3 border-t border-slate-800">
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400 font-semibold">وقت الراحة بين الجولات:</span>
+          <span id="timerCountdownDisplay" class="num-font text-2xl font-extrabold text-amber-400">01:30</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" data-rest-sec="60" class="rest-preset-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">60ث</button>
+          <button type="button" data-rest-sec="90" class="rest-preset-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">90ث</button>
+          <button type="button" data-rest-sec="120" class="rest-preset-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">120ث</button>
+          <button type="button" id="timerStartPauseBtn" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">بدء</button>
+          <button type="button" id="timerResetBtn" class="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs font-semibold">إعادة</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-5xl mx-auto px-4 pt-4 space-y-5">
+
+    <!-- Top Quick Summary KPI Cards -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between">
+        <span class="text-xs text-slate-400 font-medium">إجمالي الجولات المسجلة</span>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiTotalLogs" class="num-font text-2xl font-extrabold text-white">0</span>
+          <span class="text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded-full">سجل نشط</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between">
+        <span class="text-xs text-slate-400 font-medium">تمارين تطورت أوزانها</span>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiProgressedCount" class="num-font text-2xl font-extrabold text-emerald-400">0</span>
+          <span class="text-xs text-emerald-300 font-semibold">تطور إيجابي ⬆️</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between">
+        <span class="text-xs text-slate-400 font-medium">أعلى وزن شخصي (PR)</span>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiHeaviestWeight" class="num-font text-2xl font-extrabold text-amber-400">0</span>
+          <span id="kpiHeaviestExercise" class="text-xs text-slate-400 truncate max-w-[110px]">—</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col justify-between">
+        <span class="text-xs text-slate-400 font-medium">الحجم التدريبي الإجمالي</span>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiTotalVolume" class="num-font text-2xl font-extrabold text-sky-400">0</span>
+          <span class="text-xs text-slate-400">وزن × عدات × جولات</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Desktop Navigation Tabs (Also visible on tablet/desktop) -->
+    <nav class="hidden md:flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+      <button type="button" data-tab="log" class="nav-tab-btn flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 tab-active">
+        <span>➕ تسجيل التمرين</span>
+      </button>
+      <button type="button" data-tab="progress" class="nav-tab-btn flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+        <span>📈 التطور والرسوم البيانية</span>
+      </button>
+      <button type="button" data-tab="overview" class="nav-tab-btn flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+        <span>🏆 مقارنة تطور الأوزان</span>
+      </button>
+      <button type="button" data-tab="history" class="nav-tab-btn flex-1 py-2.5 px-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+        <span>📋 السجل وإدارة التمارين</span>
+      </button>
+    </nav>
+
+    <!-- ==================== TAB 1: LOG WORKOUT (تسجيل التمرين) ==================== -->
+    <section id="tab-log" class="tab-panel space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- Left/Main Column: Quick Mobile Workout Logger -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4 shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base md:text-lg font-extrabold text-white">تسجيل وزن جديد</h2>
+              <p class="text-xs text-slate-400">اختر العضلة والتمرين وسجل وزنك وعداتك بضغطة واحدة</p>
+            </div>
+            <button type="button" id="openNewExerciseModalBtn" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition">
+              + إضافة تمرين مخصص
+            </button>
+          </div>
+
+          <!-- Muscle Group Pills -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-2">1. اختر العضلة المستهدفة:</label>
+            <div id="muscleFilterPills" class="flex flex-wrap gap-1.5">
+              <button type="button" data-muscle="all" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white">الكل</button>
+              <button type="button" data-muscle="صدر" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">صدر</button>
+              <button type="button" data-muscle="ظهر" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">ظهر</button>
+              <button type="button" data-muscle="أرجل" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">أرجل</button>
+              <button type="button" data-muscle="أكتاف" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">أكتاف</button>
+              <button type="button" data-muscle="ذراعين" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">باي وتراي</button>
+              <button type="button" data-muscle="بطن" class="muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">بطن وكور</button>
+            </div>
+          </div>
+
+          <!-- Quick Inline Add Exercise Box -->
+          <div class="bg-slate-950/90 border border-emerald-800/50 rounded-2xl p-3 space-y-2">
+            <label for="quickExerciseNameInput" class="block text-xs font-bold text-emerald-400">أضف تمرينك الخاص بسرعة (أو اختر من تمارينك المسجلة بالأسفل):</label>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <input id="quickExerciseNameInput" type="text" placeholder="اكتب اسم التمرين (مثال: بنش برس، سكوات، سحب ظهر...)" class="sm:col-span-6 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+              <select id="quickExerciseMuscleSelect" class="sm:col-span-3 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500">
+                <option value="صدر">صدر</option>
+                <option value="ظهر">ظهر</option>
+                <option value="أرجل">أرجل</option>
+                <option value="أكتاف">أكتاف</option>
+                <option value="ذراعين">باي وتراي</option>
+                <option value="بطن">بطن وكور</option>
+              </select>
+              <button type="button" id="quickAddExerciseBtn" class="sm:col-span-3 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition">
+                + حفظ التمرين
+              </button>
+            </div>
+          </div>
+
+          <!-- Exercise Select & Date -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="exerciseSelect" class="block text-xs font-bold text-slate-300">2. اختر من تمارينك المحفوظة:</label>
+                <button type="button" id="deleteSelectedExerciseBtn" class="text-[11px] font-bold text-rose-400 hover:text-rose-300 transition">حذف هذا التمرين</button>
+              </div>
+              <select id="exerciseSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+              </select>
+            </div>
+            <div>
+              <label for="logDateInput" class="block text-xs font-bold text-slate-300 mb-1.5">تاريخ التمرين:</label>
+              <input id="logDateInput" type="date" class="num-font w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          <!-- Instant Benchmark Card for Selected Exercise -->
+          <div id="selectedExerciseBenchmark" class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between">
+              <span id="benchExerciseTitle" class="text-xs font-bold text-emerald-400">معلومات التمرين السابق</span>
+              <span id="benchTrendBadge" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-slate-300">—</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div class="bg-slate-900 rounded-xl p-2 border border-slate-800/80">
+                <span class="block text-[11px] text-slate-400">آخر وزن مسجل</span>
+                <span id="benchLastWeight" class="num-font text-base font-extrabold text-white">—</span>
+              </div>
+              <div class="bg-slate-900 rounded-xl p-2 border border-slate-800/80">
+                <span class="block text-[11px] text-slate-400">أعلى وزن (PR)</span>
+                <span id="benchBestWeight" class="num-font text-base font-extrabold text-amber-400">—</span>
+              </div>
+              <div class="bg-slate-900 rounded-xl p-2 border border-slate-800/80">
+                <span class="block text-[11px] text-slate-400">أقصى عدة تقديري (1RM)</span>
+                <span id="benchEst1RM" class="num-font text-base font-extrabold text-sky-400">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weight, Reps, Sets Stepper Controls (Mobile-friendly big buttons) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+            <!-- Weight Control -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="weightInput" class="text-xs font-bold text-slate-300">الوزن (<span class="unit-text">كجم</span>)</label>
+                <span class="text-[11px] text-emerald-400 font-semibold">±2.5 سريع</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-step-target="weightInput" data-step="-2.5" class="stepper-btn w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-lg font-extrabold text-slate-200 flex items-center justify-center">−</button>
+                <input id="weightInput" type="number" step="0.5" min="0" value="40" class="num-font w-full bg-slate-900 border border-slate-700 rounded-xl py-2 text-center text-lg font-extrabold text-white focus:outline-none focus:border-emerald-500" />
+                <button type="button" data-step-target="weightInput" data-step="2.5" class="stepper-btn w-10 h-10 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 active:scale-95 text-lg font-extrabold text-emerald-300 flex items-center justify-center">+</button>
+              </div>
+            </div>
+
+            <!-- Reps Control -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="repsInput" class="text-xs font-bold text-slate-300">العدات (Reps)</label>
+                <span class="text-[11px] text-slate-400">في الجولة</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-step-target="repsInput" data-step="-1" class="stepper-btn w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-lg font-extrabold text-slate-200 flex items-center justify-center">−</button>
+                <input id="repsInput" type="number" step="1" min="1" value="10" class="num-font w-full bg-slate-900 border border-slate-700 rounded-xl py-2 text-center text-lg font-extrabold text-white focus:outline-none focus:border-emerald-500" />
+                <button type="button" data-step-target="repsInput" data-step="1" class="stepper-btn w-10 h-10 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 active:scale-95 text-lg font-extrabold text-emerald-300 flex items-center justify-center">+</button>
+              </div>
+            </div>
+
+            <!-- Sets Control -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="setsInput" class="text-xs font-bold text-slate-300">الجولات (Sets)</label>
+                <span class="text-[11px] text-slate-400">عدد الجولات</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-step-target="setsInput" data-step="-1" class="stepper-btn w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-lg font-extrabold text-slate-200 flex items-center justify-center">−</button>
+                <input id="setsInput" type="number" step="1" min="1" value="3" class="num-font w-full bg-slate-900 border border-slate-700 rounded-xl py-2 text-center text-lg font-extrabold text-white focus:outline-none focus:border-emerald-500" />
+                <button type="button" data-step-target="setsInput" data-step="1" class="stepper-btn w-10 h-10 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 active:scale-95 text-lg font-extrabold text-emerald-300 flex items-center justify-center">+</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Live Comparison Preview Before Saving -->
+          <div id="liveProgressPreviewBox" class="rounded-xl p-3 border border-emerald-800/60 bg-emerald-950/30 text-xs font-bold text-emerald-300 flex items-center justify-between">
+            <span id="liveProgressMessage">أدخل الوزن لمعرفة نسبة تطورك مقارنة بآخر تمرين</span>
+            <span id="liveEst1RMPreview" class="num-font text-emerald-400">1RM: 53.3 كجم</span>
+          </div>
+
+          <!-- Optional Notes & Difficulty -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <input id="notesInput" type="text" placeholder="ملاحظة اختيارية (مثال: تحكم عالي، راحة دقيقة ونصف...)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <select id="rpeSelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-300 focus:outline-none focus:border-emerald-500">
+                <option value="ممتاز (سهل)">الشعور: ممتاز (سهل)</option>
+                <option value="متوسط (مناسب)" selected>الشعور: متوسط (مناسب)</option>
+                <option value="ثقيل (قريب للفشل)">الشعور: ثقيل (قريب للفشل)</option>
+                <option value="أقصى جهد (PR)">الشعور: أقصى جهد 🔥</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button id="saveWorkoutBtn" type="button" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] text-white font-extrabold text-base shadow-lg shadow-emerald-950/60 transition flex items-center justify-center gap-2">
+            <span>حفظ التمرين في السجل</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Right Column: Recent Logs for Selected Exercise + Latest Today Logs -->
+        <div class="lg:col-span-5 space-y-4">
+          <!-- Selected Exercise Mini History -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-white">تدرج أوزانك في هذا التمرين</h3>
+              <button type="button" id="jumpToChartBtn" class="text-xs font-bold text-emerald-400 hover:underline">عرض الرسم البياني ←</button>
+            </div>
+            <div id="selectedExerciseHistoryList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+            </div>
+          </div>
+
+          <!-- Latest Logged Exercises Overall -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-white">آخر التمارين المسجلة</h3>
+              <span id="recentCountBadge" class="text-xs text-slate-400">آخر 5</span>
+            </div>
+            <div id="recentLogsMiniList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: PROGRESS & CHARTS (التطور مع الوقت) ==================== -->
+    <section id="tab-progress" class="tab-panel hidden space-y-5">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-base md:text-lg font-extrabold text-white">منحنى التطور مع الوقت</h2>
+            <p class="text-xs text-slate-400">راقب ارتفاع أوزانك أو قوتك القصوى (1RM) والحجم التدريبي عبر الأسابيع</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="chartExerciseSelect" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs md:text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+            </select>
+            <select id="chartMetricSelect" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs md:text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-500">
+              <option value="weight">الوزن المرفوع</option>
+              <option value="oneRm">أقصى وزن لعدة واحدة (1RM)</option>
+              <option value="volume">الحجم التدريبي (الوزن × العدات × الجولات)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Detailed Progress Verdict Banner -->
+        <div id="chartVerdictBanner" class="rounded-2xl p-4 border border-slate-800 bg-slate-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span id="verdictStatusDot" class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+              <h3 id="verdictHeadline" class="text-sm md:text-base font-extrabold text-white">تحليل التطور</h3>
+            </div>
+            <p id="verdictDescription" class="text-xs text-slate-300 leading-relaxed"></p>
+          </div>
+          <div class="flex items-center gap-4 shrink-0 bg-slate-900 px-4 py-2.5 rounded-xl border border-slate-800">
+            <div>
+              <span class="block text-[11px] text-slate-400">البداية</span>
+              <span id="verdictStartVal" class="num-font text-sm font-extrabold text-slate-200">—</span>
+            </div>
+            <span class="text-slate-500 font-bold">←</span>
+            <div>
+              <span class="block text-[11px] text-slate-400">الحالي</span>
+              <span id="verdictCurrentVal" class="num-font text-sm font-extrabold text-emerald-400">—</span>
+            </div>
+            <div class="border-r border-slate-800 pr-3">
+              <span class="block text-[11px] text-slate-400">الفرق</span>
+              <span id="verdictDiffVal" class="num-font text-sm font-extrabold text-emerald-400">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed height chart container per guidelines -->
+        <div class="bg-slate-950 border border-slate-800/80 rounded-2xl p-3 md:p-4">
+          <div class="relative h-72 w-full">
+            <canvas id="progressChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Session-by-session table for this exercise -->
+        <div class="space-y-2 pt-2">
+          <h3 class="text-sm font-bold text-slate-200">سجل الجلسات الزمني لهذا التمرين:</h3>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3">التاريخ</th>
+                  <th class="py-2.5 px-3">الوزن</th>
+                  <th class="py-2.5 px-3">العدات × الجولات</th>
+                  <th class="py-2.5 px-3">1RM التقديري</th>
+                  <th class="py-2.5 px-3">التغير عن الجلسة السابقة</th>
+                </tr>
+              </thead>
+              <tbody id="chartExerciseTableBody" class="divide-y divide-slate-800/70 bg-slate-900/60">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: ALL EXERCISES PROGRESS OVERVIEW (مقارنة تطور الأوزان) ==================== -->
+    <section id="tab-overview" class="tab-panel hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base md:text-lg font-extrabold text-white">ملخص التطور في كل التمارين</h2>
+            <p class="text-xs text-slate-400">شاهد بلمحة واحدة أي التمارين زادت أوزانها وأيها يحتاج كسر ثبات</p>
+          </div>
+          <select id="overviewMuscleFilter" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+            <option value="all">كل العضلات</option>
+            <option value="صدر">صدر</option>
+            <option value="ظهر">ظهر</option>
+            <option value="أرجل">أرجل</option>
+            <option value="أكتاف">أكتاف</option>
+            <option value="ذراعين">باي وتراي</option>
+            <option value="بطن">بطن وكور</option>
+          </select>
+        </div>
+
+        <div id="overviewCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: FULL HISTORY & DATA MANAGEMENT (السجل وإدارة التمارين) ==================== -->
+    <section id="tab-history" class="tab-panel hidden space-y-5">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base md:text-lg font-extrabold text-white">سجل كل التمارين المحفوظة</h2>
+            <p class="text-xs text-slate-400">ابحث في تمارينك السابقة أو عدل واحذف أي سجل، مع حفظ تلقائي على جوالك</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="historySearchInput" type="text" placeholder="ابحث باسم التمرين أو الملاحظة..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <select id="historyMuscleFilter" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+              <option value="all">كل العضلات</option>
+              <option value="صدر">صدر</option>
+              <option value="ظهر">ظهر</option>
+              <option value="أرجل">أرجل</option>
+              <option value="أكتاف">أكتاف</option>
+              <option value="ذراعين">باي وتراي</option>
+              <option value="بطن">بطن وكور</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- History List -->
+        <div id="fullHistoryList" class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+        </div>
+
+        <!-- Data Backup / Demo Data Actions -->
+        <div class="border-t border-slate-800 pt-4 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="exportCsvBtn" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-300 border border-slate-700 transition">
+              📥 تصدير جدول (CSV)
+            </button>
+            <button type="button" id="loadDemoDataBtn" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 border border-slate-700 transition">
+              🔄 استعادة البيانات التجريبية
+            </button>
+          </div>
+          <button type="button" id="clearAllDataBtn" class="px-3.5 py-2 rounded-xl bg-rose-950/70 hover:bg-rose-900 text-xs font-bold text-rose-300 border border-rose-800/60 transition">
+            🗑️ مسح كل السجلات والبدء من الصفر
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-2 py-1.5 grid grid-cols-4 gap-1">
+    <button type="button" data-tab="log" class="nav-tab-btn py-2 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold tab-active">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      <span>تسجيل</span>
+    </button>
+    <button type="button" data-tab="progress" class="nav-tab-btn py-2 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+      </svg>
+      <span>التطور</span>
+    </button>
+    <button type="button" data-tab="overview" class="nav-tab-btn py-2 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+      </svg>
+      <span>مقارنة الأوزان</span>
+    </button>
+    <button type="button" data-tab="history" class="nav-tab-btn py-2 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+      <span>السجل</span>
+    </button>
+  </nav>
+
+  <!-- Modal: Add Custom Exercise -->
+  <div id="newExerciseModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white">إضافة تمرين مخصص جديد</h3>
+        <button type="button" id="closeNewExerciseModalBtn" class="text-slate-400 hover:text-white text-sm font-bold px-2 py-1">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label for="customExerciseNameInput" class="block text-xs font-bold text-slate-300 mb-1">اسم التمرين:</label>
+          <input id="customExerciseNameInput" type="text" placeholder="مثال: هاك سكوات، تفتيح صدر بالكابل..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label for="customExerciseMuscleSelect" class="block text-xs font-bold text-slate-300 mb-1">العضلة الأساسية:</label>
+          <select id="customExerciseMuscleSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+            <option value="صدر">صدر</option>
+            <option value="ظهر">ظهر</option>
+            <option value="أرجل">أرجل</option>
+            <option value="أكتاف">أكتاف</option>
+            <option value="ذراعين">باي وتراي</option>
+            <option value="بطن">بطن وكور</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" id="cancelNewExerciseBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">إلغاء</button>
+        <button type="button" id="confirmNewExerciseBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white">إضافة التمرين</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirm Clear All Data -->
+  <div id="confirmClearModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <h3 class="text-base font-extrabold text-white">تأكيد مسح جميع السجلات</h3>
+      <p class="text-xs text-slate-300 leading-relaxed">هل أنت متأكد من رغبتك في مسح كل السجلات الحالية والبدء بصفحة فارغة تماماً؟ يمكنك دائماً استعادة البيانات التجريبية لاحقاً.</p>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" id="cancelClearBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">تراجع</button>
+        <button type="button" id="confirmClearBtn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white">نعم، امسح السجل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: How to Run on Mobile & Download Standalone File -->
+  <div id="mobileGuideModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white">📲 كيف تشغل الموقع على جوالك؟</h3>
+        <button type="button" id="closeMobileGuideBtn" class="text-slate-400 hover:text-white text-sm font-bold px-2 py-1">✕</button>
+      </div>
+      <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+        <div class="bg-slate-950 border border-emerald-800/60 rounded-xl p-3.5 space-y-2">
+          <div class="font-extrabold text-emerald-400 text-sm">الطريقة 1: تحميل ملف الموقع مباشرة على جوالك</div>
+          <p>اضغط الزر بالأسفل لتحميل الموقع كملف مستقل (<span class="num-font">gym_tracker.html</span>) ثم افتحه بمتصفح جوالك (Chrome أو Safari):</p>
+          <button type="button" id="downloadStandaloneHtmlBtn" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition">
+            ⬇️ تحميل ملف الموقع (HTML) للجوال
+          </button>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+          <div class="font-extrabold text-white text-sm">الطريقة 2: تثبيته كتطبيق على الشاشة الرئيسية (مجاني كرابط دائم)</div>
+          <p>لتشغيله كأيقونة تطبيق على شاشة جوالك الرئيسية (مثل آيفون وأندرويد):</p>
+          <ul class="list-disc pr-4 space-y-1 text-slate-300">
+            <li>ارفع ملف الـ HTML المحمل مجاناً في ثوانٍ على موقع <strong>Netlify Drop</strong> (عبر سحب الملف في <span class="num-font">app.netlify.com/drop</span>) أو <strong>GitHub Pages</strong> ليمنحك رابطاً خاصاً بك.</li>
+            <li>افتح الرابط في جوالك ثم اضغط <strong>مشاركة (Share)</strong> في آيفون أو القائمة (⋮) في أندرويد واختر <strong>"إضافة إلى الشاشة الرئيسية" (Add to Home Screen)</strong>.</li>
+          </ul>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+          <div class="font-extrabold text-sky-400 text-sm">الطريقة 3: فتحه مباشرة من تطبيق Gemini في جوالك</div>
+          <p>افتح هذه المحادثة من تطبيق <strong>Gemini</strong> على جوالك واضغط على بطاقة الموقع، وسيعمل معك فوراً بكامل المميزات.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end pt-2">
+        <button type="button" id="doneMobileGuideBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">فهمت، إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY_LOGS = 'gym_tracker_ar_logs_v2';
+      const STORAGE_KEY_EXERCISES = 'gym_tracker_ar_exercises_v2';
+      const STORAGE_KEY_UNIT = 'gym_tracker_ar_unit_v2';
+
+      // يبدأ الموقع فارغاً تماماً ليضيف المستخدم تمارينه بنفسه
+      const DEFAULT_EXERCISES = [];
+
+      function buildDemoLogs() {
+        return [];
+      }
+
+      // State
+      let exercises = [];
+      let logs = [];
+      let unit = 'كجم';
+      let activeMuscleFilter = 'all';
+      let activeTab = 'log';
+      let progressChartInstance = null;
+
+      // Rest Timer State
+      let timerRemainingSec = 90;
+      let timerDefaultSec = 90;
+      let timerIntervalId = null;
+
+      // Safe localStorage helpers
+      function safeGetStorage(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function safeSetStorage(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {
+          // Ignore quota or sandbox errors
+        }
+      }
+
+      function loadState() {
+        const storedEx = safeGetStorage(STORAGE_KEY_EXERCISES);
+        if (storedEx) {
+          try {
+            exercises = JSON.parse(storedEx);
+          } catch (e) {
+            exercises = DEFAULT_EXERCISES.slice();
+          }
+        } else {
+          exercises = DEFAULT_EXERCISES.slice();
+        }
+
+        const storedLogs = safeGetStorage(STORAGE_KEY_LOGS);
+        if (storedLogs) {
+          try {
+            logs = JSON.parse(storedLogs);
+          } catch (e) {
+            logs = buildDemoLogs();
+          }
+        } else {
+          logs = buildDemoLogs();
+        }
+
+        const storedUnit = safeGetStorage(STORAGE_KEY_UNIT);
+        if (storedUnit === 'كجم' || storedUnit === 'باوند') {
+          unit = storedUnit;
+        }
+      }
+
+      function saveState() {
+        safeSetStorage(STORAGE_KEY_EXERCISES, JSON.stringify(exercises));
+        safeSetStorage(STORAGE_KEY_LOGS, JSON.stringify(logs));
+        safeSetStorage(STORAGE_KEY_UNIT, unit);
+      }
+
+      // Formula: Epley 1RM = weight * (1 + reps / 30)
+      function calcEst1RM(weight, reps) {
+        const w = Number(weight) || 0;
+        const r = Number(reps) || 1;
+        if (r <= 1) return w;
+        return +(w * (1 + r / 30)).toFixed(1);
+      }
+
+      function getExerciseById(id) {
+        return exercises.find(function (e) { return e.id === id; }) || { id: id, name: id, muscle: 'أخرى' };
+      }
+
+      function getLogsForExercise(exerciseId) {
+        return logs
+          .filter(function (l) { return l.exerciseId === exerciseId; })
+          .slice()
+          .sort(function (a, b) {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return String(a.id).localeCompare(String(b.id));
+          });
+      }
+
+      function showToast(message, type) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const bgClass = type === 'pr'
+          ? 'bg-amber-500 text-slate-950 border-amber-300'
+          : type === 'warn'
+          ? 'bg-rose-600 text-white border-rose-400'
+          : 'bg-emerald-600 text-white border-emerald-400';
+
+        toast.className = 'pointer-events-auto border rounded-2xl px-4 py-3 shadow-2xl text-xs md:text-sm font-extrabold flex items-center justify-between gap-3 transition-all duration-300 ' + bgClass;
+        toast.innerHTML = '<span>' + message + '</span>';
+        container.appendChild(toast);
+
+        setTimeout(function () {
+          toast.style.opacity = '0';
+          setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+          }, 300);
+        }, 3500);
+      }
+
+      // Update Unit Labels across UI
+      function renderUnitLabels() {
+        document.getElementById('currentUnitLabel').textContent = unit === 'كجم' ? 'كجم (KG)' : 'باوند (LBS)';
+        const unitSpans = document.querySelectorAll('.unit-text');
+        unitSpans.forEach(function (el) {
+          el.textContent = unit;
+        });
+      }
+
+      // Render Top KPIs
+      function renderKPIs() {
+        document.getElementById('kpiTotalLogs').textContent = logs.length;
+
+        // Calculate how many exercises have progressed (latest weight > first weight)
+        let progressedCount = 0;
+        let heaviestWeight = 0;
+        let heaviestExName = '—';
+        let totalVolume = 0;
+
+        logs.forEach(function (l) {
+          const w = Number(l.weight) || 0;
+          const r = Number(l.reps) || 0;
+          const s = Number(l.sets) || 0;
+          totalVolume += w * r * s;
+          if (w > heaviestWeight) {
+            heaviestWeight = w;
+            heaviestExName = getExerciseById(l.exerciseId).name;
+          }
+        });
+
+        exercises.forEach(function (ex) {
+          const exLogs = getLogsForExercise(ex.id);
+          if (exLogs.length >= 2) {
+            const first = exLogs[0];
+            const last = exLogs[exLogs.length - 1];
+            if (Number(last.weight) > Number(first.weight) || calcEst1RM(last.weight, last.reps) > calcEst1RM(first.weight, first.reps)) {
+              progressedCount++;
+            }
+          }
+        });
+
+        document.getElementById('kpiProgressedCount').textContent = progressedCount;
+        document.getElementById('kpiHeaviestWeight').textContent = heaviestWeight > 0 ? heaviestWeight + ' ' + unit : '0';
+        document.getElementById('kpiHeaviestExercise').textContent = heaviestExName;
+        document.getElementById('kpiTotalVolume').textContent = totalVolume.toLocaleString('en-US');
+      }
+
+      // Populate Exercise Dropdowns
+      function populateExerciseSelects(keepSelectionId) {
+        const logSelect = document.getElementById('exerciseSelect');
+        const chartSelect = document.getElementById('chartExerciseSelect');
+
+        const currentLogVal = keepSelectionId || logSelect.value;
+        const currentChartVal = chartSelect.value;
+
+        const filteredForLog = activeMuscleFilter === 'all'
+          ? exercises
+          : exercises.filter(function (e) { return e.muscle === activeMuscleFilter; });
+
+        logSelect.innerHTML = '';
+        if (filteredForLog.length === 0) {
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '— لا توجد تمارين بعد (أضف تمرينك من الخانة بالأعلى) —';
+          logSelect.appendChild(emptyOpt);
+        } else {
+          filteredForLog.forEach(function (ex) {
+            const opt = document.createElement('option');
+            opt.value = ex.id;
+            opt.textContent = ex.name + ' (' + ex.muscle + ')';
+            logSelect.appendChild(opt);
+          });
+        }
+
+        if (filteredForLog.some(function (e) { return e.id === currentLogVal; })) {
+          logSelect.value = currentLogVal;
+        }
+
+        // Chart select always lists all exercises
+        chartSelect.innerHTML = '';
+        if (exercises.length === 0) {
+          const emptyChartOpt = document.createElement('option');
+          emptyChartOpt.value = '';
+          emptyChartOpt.textContent = '— أضف تمريناً أولاً لعرض الرسم البياني —';
+          chartSelect.appendChild(emptyChartOpt);
+        } else {
+          exercises.forEach(function (ex) {
+            const count = getLogsForExercise(ex.id).length;
+            const opt = document.createElement('option');
+            opt.value = ex.id;
+            opt.textContent = ex.name + ' (' + count + ' جلسات)';
+            chartSelect.appendChild(opt);
+          });
+        }
+
+        if (exercises.some(function (e) { return e.id === currentChartVal; })) {
+          chartSelect.value = currentChartVal;
+        } else if (logSelect.value) {
+          chartSelect.value = logSelect.value;
+        }
+      }
+
+      // Update Benchmark & Live Comparison on Tab 1
+      function updateSelectedExerciseBenchmark() {
+        const exId = document.getElementById('exerciseSelect').value;
+        if (!exId) {
+          document.getElementById('benchExerciseTitle').textContent = 'لم يتم اختيار تمرين بعد';
+          document.getElementById('benchLastWeight').textContent = '—';
+          document.getElementById('benchBestWeight').textContent = '—';
+          document.getElementById('benchEst1RM').textContent = '—';
+          const badgeEl = document.getElementById('benchTrendBadge');
+          badgeEl.textContent = 'أضف تمرينك الأول بالأعلى للبدء 💪';
+          badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-emerald-300';
+          updateLiveInputComparison();
+          renderSelectedExerciseMiniHistory();
+          return;
+        }
+        const ex = getExerciseById(exId);
+        const exLogs = getLogsForExercise(exId);
+
+        document.getElementById('benchExerciseTitle').textContent = ex.name + ' • ' + ex.muscle;
+
+        const lastWeightEl = document.getElementById('benchLastWeight');
+        const bestWeightEl = document.getElementById('benchBestWeight');
+        const est1RMEl = document.getElementById('benchEst1RM');
+        const badgeEl = document.getElementById('benchTrendBadge');
+
+        if (exLogs.length === 0) {
+          lastWeightEl.textContent = 'لا يوجد';
+          bestWeightEl.textContent = 'لا يوجد';
+          est1RMEl.textContent = 'لا يوجد';
+          badgeEl.textContent = 'أول مرة تسجل هذا التمرين 🌟';
+          badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-slate-300';
+        } else {
+          const lastLog = exLogs[exLogs.length - 1];
+          let maxW = 0;
+          let max1RM = 0;
+          exLogs.forEach(function (l) {
+            if (Number(l.weight) > maxW) maxW = Number(l.weight);
+            const rm = calcEst1RM(l.weight, l.reps);
+            if (rm > max1RM) max1RM = rm;
+          });
+
+          lastWeightEl.textContent = lastLog.weight + ' ' + unit + ' × ' + lastLog.reps;
+          bestWeightEl.textContent = maxW + ' ' + unit;
+          est1RMEl.textContent = max1RM + ' ' + unit;
+
+          if (exLogs.length >= 2) {
+            const firstW = Number(exLogs[0].weight);
+            const diff = +(Number(lastLog.weight) - firstW).toFixed(1);
+            if (diff > 0) {
+              badgeEl.textContent = 'متطور بـ +' + diff + ' ' + unit + ' عن البداية ⬆️';
+              badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60';
+            } else if (diff === 0) {
+              badgeEl.textContent = 'وزن ثابت — جاهز للزيادة 💪';
+              badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-700/60';
+            } else {
+              badgeEl.textContent = diff + ' ' + unit + ' عن البداية';
+              badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-slate-300';
+            }
+          } else {
+            badgeEl.textContent = 'جلسة واحدة مسجلة';
+            badgeEl.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 text-slate-300';
+          }
+        }
+
+        updateLiveInputComparison();
+        renderSelectedExerciseMiniHistory();
+      }
+
+      function updateLiveInputComparison() {
+        const exId = document.getElementById('exerciseSelect').value;
+        const exLogs = getLogsForExercise(exId);
+        const inputWeight = Number(document.getElementById('weightInput').value) || 0;
+        const inputReps = Number(document.getElementById('repsInput').value) || 1;
+        const input1RM = calcEst1RM(inputWeight, inputReps);
+
+        const box = document.getElementById('liveProgressPreviewBox');
+        const msg = document.getElementById('liveProgressMessage');
+        const rmSpan = document.getElementById('liveEst1RMPreview');
+
+        rmSpan.textContent = '1RM: ' + input1RM + ' ' + unit;
+
+        if (exLogs.length === 0) {
+          box.className = 'rounded-xl p-3 border border-sky-800/60 bg-sky-950/30 text-xs font-bold text-sky-300 flex items-center justify-between';
+          msg.textContent = '✨ أول تسجيل لهذا التمرين — سيعتمد كخط أساس لتطورك!';
+          return;
+        }
+
+        const lastLog = exLogs[exLogs.length - 1];
+        let maxW = 0;
+        exLogs.forEach(function (l) {
+          if (Number(l.weight) > maxW) maxW = Number(l.weight);
+        });
+
+        const diffLast = +(inputWeight - Number(lastLog.weight)).toFixed(1);
+
+        if (inputWeight > maxW) {
+          const prDiff = +(inputWeight - maxW).toFixed(1);
+          box.className = 'rounded-xl p-3 border border-amber-500/60 bg-amber-950/40 text-xs font-bold text-amber-300 flex items-center justify-between';
+          msg.textContent = '🏆 رقم قياسي جديد (PR)! أعلى من أفضل وزن لك بـ +' + prDiff + ' ' + unit;
+        } else if (diffLast > 0) {
+          box.className = 'rounded-xl p-3 border border-emerald-700/60 bg-emerald-950/40 text-xs font-bold text-emerald-300 flex items-center justify-between';
+          msg.textContent = '⬆️ تطور ممتاز! زيادة +' + diffLast + ' ' + unit + ' عن آخر تمرين';
+        } else if (diffLast === 0 && inputReps > Number(lastLog.reps)) {
+          const repDiff = inputReps - Number(lastLog.reps);
+          box.className = 'rounded-xl p-3 border border-emerald-700/60 bg-emerald-950/40 text-xs font-bold text-emerald-300 flex items-center justify-between';
+          msg.textContent = '⬆️ تطور بالعدات! نفس الوزن مع +' + repDiff + ' عدات إضافية';
+        } else if (diffLast === 0) {
+          box.className = 'rounded-xl p-3 border border-slate-700 bg-slate-950 text-xs font-bold text-slate-300 flex items-center justify-between';
+          msg.textContent = '⚖️ محافظ على نفس وزن آخر جلسة (' + lastLog.weight + ' ' + unit + ')';
+        } else {
+          box.className = 'rounded-xl p-3 border border-slate-800 bg-slate-950 text-xs font-bold text-slate-400 flex items-center justify-between';
+          msg.textContent = 'وزن أخف من آخر جلسة بـ ' + Math.abs(diffLast) + ' ' + unit + ' (تمرين استشفاء أو تكنيك)';
+        }
+      }
+
+      // Render Mini History on Tab 1
+      function renderSelectedExerciseMiniHistory() {
+        const exId = document.getElementById('exerciseSelect').value;
+        const exLogs = getLogsForExercise(exId);
+        const container = document.getElementById('selectedExerciseHistoryList');
+        container.innerHTML = '';
+
+        if (exLogs.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-500 py-6 text-center">لا توجد جلسات مسجلة لهذا التمرين بعد.</div>';
+          return;
+        }
+
+        const reversed = exLogs.slice().reverse();
+        reversed.forEach(function (log, idx) {
+          const chronologicalIdx = exLogs.length - 1 - idx;
+          const prevLog = chronologicalIdx > 0 ? exLogs[chronologicalIdx - 1] : null;
+          let badgeHtml = '<span class="text-[11px] px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400">بداية</span>';
+
+          if (prevLog) {
+            const diff = +(Number(log.weight) - Number(prevLog.weight)).toFixed(1);
+            if (diff > 0) {
+              badgeHtml = '<span class="num-font text-[11px] px-2 py-0.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-bold">+' + diff + ' ' + unit + ' ⬆️</span>';
+            } else if (diff === 0 && Number(log.reps) > Number(prevLog.reps)) {
+              badgeHtml = '<span class="num-font text-[11px] px-2 py-0.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-bold">+' + (Number(log.reps) - Number(prevLog.reps)) + ' عدات ⬆️</span>';
+            } else if (diff === 0) {
+              badgeHtml = '<span class="text-[11px] px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300">ثابت</span>';
+            } else {
+              badgeHtml = '<span class="num-font text-[11px] px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400">' + diff + ' ' + unit + '</span>';
+            }
+          }
+
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between bg-slate-950 border border-slate-800/80 rounded-xl px-3 py-2.5 text-xs';
+          row.innerHTML =
+            '<div>' +
+              '<div class="font-extrabold text-white num-font">' + log.weight + ' ' + unit + ' <span class="text-slate-400 font-normal">× ' + log.reps + ' عدات (' + log.sets + ' جولات)</span></div>' +
+              '<div class="text-[11px] text-slate-400 num-font">' + log.date + (log.notes ? ' • ' + log.notes : '') + '</div>' +
+            '</div>' +
+            badgeHtml;
+          container.appendChild(row);
+        });
+      }
+
+      // Render Latest 5 Logs Overall on Tab 1
+      function renderRecentLogsMiniList() {
+        const container = document.getElementById('recentLogsMiniList');
+        container.innerHTML = '';
+
+        const sorted = logs.slice().sort(function (a, b) {
+          if (b.date !== a.date) return b.date.localeCompare(a.date);
+          return String(b.id).localeCompare(String(a.id));
+        }).slice(0, 5);
+
+        if (sorted.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-500 py-6 text-center">لم تسجل أي تمرين حتى الآن.</div>';
+          return;
+        }
+
+        sorted.forEach(function (log) {
+          const ex = getExerciseById(log.exerciseId);
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between bg-slate-950 border border-slate-800/80 rounded-xl px-3 py-2.5 text-xs';
+          item.innerHTML =
+            '<div>' +
+              '<div class="font-bold text-emerald-400">' + ex.name + '</div>' +
+              '<div class="text-[11px] text-slate-400 num-font">' + log.date + ' • ' + ex.muscle + '</div>' +
+            '</div>' +
+            '<div class="text-left num-font">' +
+              '<div class="font-extrabold text-white text-sm">' + log.weight + ' ' + unit + '</div>' +
+              '<div class="text-[11px] text-slate-400">' + log.reps + ' عدات × ' + log.sets + '</div>' +
+            '</div>';
+          container.appendChild(item);
+        });
+      }
+
+      // Render Tab 2: Chart & Verdict
+      function renderProgressChartAndTable() {
+        const exId = document.getElementById('chartExerciseSelect').value;
+        const metric = document.getElementById('chartMetricSelect').value;
+        const ex = getExerciseById(exId);
+        const exLogs = getLogsForExercise(exId);
+
+        const headlineEl = document.getElementById('verdictHeadline');
+        const descEl = document.getElementById('verdictDescription');
+        const dotEl = document.getElementById('verdictStatusDot');
+        const startEl = document.getElementById('verdictStartVal');
+        const currEl = document.getElementById('verdictCurrentVal');
+        const diffEl = document.getElementById('verdictDiffVal');
+        const tbody = document.getElementById('chartExerciseTableBody');
+
+        tbody.innerHTML = '';
+
+        function getMetricVal(log) {
+          if (metric === 'oneRm') return calcEst1RM(log.weight, log.reps);
+          if (metric === 'volume') return +((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 0)).toFixed(0);
+          return Number(log.weight) || 0;
+        }
+
+        if (exLogs.length === 0) {
+          headlineEl.textContent = 'لا توجد بيانات مسجلة لتمرين ' + ex.name;
+          descEl.textContent = 'سجل جلسة واحدة على الأقل في تبويب "تسجيل التمرين" ليظهر منحنى التطور الخاص بك.';
+          dotEl.className = 'w-3 h-3 rounded-full bg-slate-500 inline-block';
+          startEl.textContent = '—';
+          currEl.textContent = '—';
+          diffEl.textContent = '—';
+        } else {
+          const firstVal = getMetricVal(exLogs[0]);
+          const lastVal = getMetricVal(exLogs[exLogs.length - 1]);
+          const diff = +(lastVal - firstVal).toFixed(1);
+          const pct = firstVal > 0 ? +((diff / firstVal) * 100).toFixed(1) : 0;
+
+          startEl.textContent = firstVal + ' ' + unit;
+          currEl.textContent = lastVal + ' ' + unit;
+
+          if (exLogs.length === 1) {
+            headlineEl.textContent = 'بداية ممتازة في ' + ex.name;
+            descEl.textContent = 'لديك جلسة واحدة مسجلة. سجل تمرينك القادم لنقارن الوزن ونحسب نسبة تطورك.';
+            dotEl.className = 'w-3 h-3 rounded-full bg-sky-400 inline-block';
+            diffEl.textContent = 'أول جلسة';
+            diffEl.className = 'num-font text-sm font-extrabold text-sky-400';
+          } else if (diff > 0) {
+            headlineEl.textContent = 'نعم! تطورت في ' + ex.name + ' بنسبة +' + pct + '% 📈';
+            descEl.textContent = 'ارتفع مستواك من ' + firstVal + ' ' + unit + ' إلى ' + lastVal + ' ' + unit + ' عبر ' + exLogs.length + ' جلسات. استمر في التدرج بالأحمال!';
+            dotEl.className = 'w-3 h-3 rounded-full bg-emerald-400 inline-block';
+            diffEl.textContent = '+' + diff + ' ' + unit;
+            diffEl.className = 'num-font text-sm font-extrabold text-emerald-400';
+          } else if (diff === 0) {
+            headlineEl.textContent = 'الوزن ثابت في ' + ex.name;
+            descEl.textContent = 'حافظت على نفس المستوى (' + lastVal + ' ' + unit + '). جرب زيادة عدة واحدة أو +2.5 ' + unit + ' في التمرين القادم لكسر الثبات.';
+            dotEl.className = 'w-3 h-3 rounded-full bg-amber-400 inline-block';
+            diffEl.textContent = '0 ' + unit;
+            diffEl.className = 'num-font text-sm font-extrabold text-amber-400';
+          } else {
+            headlineEl.textContent = 'انخفاض طفيف في آخر جلسة لتمرين ' + ex.name;
+            descEl.textContent = 'آخر وزن مسجل أقل من نقطة البداية بـ ' + Math.abs(diff) + ' ' + unit + '. تأكد من أخذ راحة كافية والتغذية الجيدة.';
+            dotEl.className = 'w-3 h-3 rounded-full bg-rose-400 inline-block';
+            diffEl.textContent = diff + ' ' + unit;
+            diffEl.className = 'num-font text-sm font-extrabold text-rose-400';
+          }
+        }
+
+        // Populate Table
+        exLogs.forEach(function (log, idx) {
+          const prev = idx > 0 ? exLogs[idx - 1] : null;
+          let diffHtml = '<span class="text-slate-400">خط الأساس</span>';
+          if (prev) {
+            const wDiff = +(Number(log.weight) - Number(prev.weight)).toFixed(1);
+            if (wDiff > 0) {
+              diffHtml = '<span class="text-emerald-400 font-bold num-font">+' + wDiff + ' ' + unit + ' ⬆️</span>';
+            } else if (wDiff === 0) {
+              diffHtml = '<span class="text-slate-300">ثابت</span>';
+            } else {
+              diffHtml = '<span class="text-rose-400 num-font">' + wDiff + ' ' + unit + '</span>';
+            }
+          }
+
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td class="py-2.5 px-3 num-font text-slate-300">' + log.date + '</td>' +
+            '<td class="py-2.5 px-3 num-font font-extrabold text-white">' + log.weight + ' ' + unit + '</td>' +
+            '<td class="py-2.5 px-3 num-font text-slate-300">' + log.reps + ' × ' + log.sets + '</td>' +
+            '<td class="py-2.5 px-3 num-font text-sky-400 font-bold">' + calcEst1RM(log.weight, log.reps) + ' ' + unit + '</td>' +
+            '<td class="py-2.5 px-3">' + diffHtml + '</td>';
+          tbody.appendChild(tr);
+        });
+
+        // Render Chart.js
+        const canvas = document.getElementById('progressChartCanvas');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        if (progressChartInstance) {
+          progressChartInstance.destroy();
+          progressChartInstance = null;
+        }
+
+        const labels = exLogs.map(function (l) { return l.date; });
+        const dataPoints = exLogs.map(function (l) { return getMetricVal(l); });
+
+        const metricLabel = metric === 'oneRm'
+          ? 'أقصى وزن تقديري لعدة واحدة (1RM)'
+          : metric === 'volume'
+          ? 'الحجم التدريبي الكلي'
+          : 'الوزن المرفوع (' + unit + ')';
+
+        progressChartInstance = new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: metricLabel,
+              data: dataPoints,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.18)',
+              borderWidth: 3,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#0f172a',
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#cbd5e1',
+                  font: { family: 'Cairo', weight: 'bold' }
+                }
+              },
+              tooltip: {
+                backgroundColor: '#0f172a',
+                titleColor: '#f8fafc',
+                bodyColor: '#10b981',
+                borderColor: '#334155',
+                borderWidth: 1
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(51, 65, 85, 0.3)' }
+              },
+              y: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(51, 65, 85, 0.3)' }
+              }
+            }
+          }
+        });
+      }
+
+      // Render Tab 3: All Exercises Progress Overview Cards
+      function renderOverviewCards() {
+        const muscleFilter = document.getElementById('overviewMuscleFilter').value;
+        const container = document.getElementById('overviewCardsGrid');
+        container.innerHTML = '';
+
+        const filteredEx = muscleFilter === 'all'
+          ? exercises
+          : exercises.filter(function (e) { return e.muscle === muscleFilter; });
+
+        if (filteredEx.length === 0) {
+          container.innerHTML = '<div class="col-span-full text-xs text-slate-400 py-8 text-center bg-slate-950 rounded-2xl border border-slate-800">لم تقم بإضافة أي تمارين بعد. أضف تمارينك من تبويب "تسجيل التمرين" لتظهر مقارنات التطور هنا.</div>';
+          return;
+        }
+        filteredEx.forEach(function (ex) {
+          const exLogs = getLogsForExercise(ex.id);
+          const card = document.createElement('div');
+          card.className = 'bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between gap-3';
+
+          if (exLogs.length === 0) {
+            card.innerHTML =
+              '<div class="flex items-center justify-between">' +
+                '<div>' +
+                  '<h3 class="text-sm font-extrabold text-white">' + ex.name + '</h3>' +
+                  '<span class="text-[11px] text-slate-400">' + ex.muscle + '</span>' +
+                '</div>' +
+                '<span class="text-[11px] px-2.5 py-1 rounded-full bg-slate-900 text-slate-500 border border-slate-800">لم يسجل بعد</span>' +
+              '</div>';
+          } else {
+            const firstLog = exLogs[0];
+            const lastLog = exLogs[exLogs.length - 1];
+            let maxW = 0;
+            exLogs.forEach(function (l) {
+              if (Number(l.weight) > maxW) maxW = Number(l.weight);
+            });
+
+            const diff = +(Number(lastLog.weight) - Number(firstLog.weight)).toFixed(1);
+            let badgeHtml = '';
+            if (exLogs.length === 1) {
+              badgeHtml = '<span class="text-xs px-2.5 py-1 rounded-full bg-sky-950 text-sky-300 border border-sky-800/60 font-bold">جلسة واحدة</span>';
+            } else if (diff > 0) {
+              badgeHtml = '<span class="num-font text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-extrabold">تطور +' + diff + ' ' + unit + ' ⬆️</span>';
+            } else if (diff === 0) {
+              badgeHtml = '<span class="text-xs px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-700/60 font-bold">ثابت — زد الوزن</span>';
+            } else {
+              badgeHtml = '<span class="num-font text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold">' + diff + ' ' + unit + '</span>';
+            }
+
+            card.innerHTML =
+              '<div class="flex items-start justify-between gap-2">' +
+                '<div>' +
+                  '<h3 class="text-sm font-extrabold text-white">' + ex.name + '</h3>' +
+                  '<span class="text-[11px] text-slate-400">' + ex.muscle + ' • ' + exLogs.length + ' جلسات</span>' +
+                '</div>' +
+                badgeHtml +
+              '</div>' +
+              '<div class="grid grid-cols-3 gap-2 text-center bg-slate-900 rounded-xl p-2.5 border border-slate-800/80">' +
+                '<div>' +
+                  '<span class="block text-[10px] text-slate-400">أول وزن</span>' +
+                  '<span class="num-font text-xs font-bold text-slate-300">' + firstLog.weight + ' ' + unit + '</span>' +
+                '</div>' +
+                '<div>' +
+                  '<span class="block text-[10px] text-slate-400">الوزن الحالي</span>' +
+                  '<span class="num-font text-xs font-extrabold text-emerald-400">' + lastLog.weight + ' ' + unit + '</span>' +
+                '</div>' +
+                '<div>' +
+                  '<span class="block text-[10px] text-slate-400">أعلى رقم (PR)</span>' +
+                  '<span class="num-font text-xs font-extrabold text-amber-400">' + maxW + ' ' + unit + '</span>' +
+                '</div>' +
+              '</div>';
+          }
+
+          container.appendChild(card);
+        });
+      }
+
+      // Render Tab 4: Full History List
+      function renderFullHistory() {
+        const query = (document.getElementById('historySearchInput').value || '').trim().toLowerCase();
+        const muscle = document.getElementById('historyMuscleFilter').value;
+        const container = document.getElementById('fullHistoryList');
+        container.innerHTML = '';
+
+        const sorted = logs.slice().sort(function (a, b) {
+          if (b.date !== a.date) return b.date.localeCompare(a.date);
+          return String(b.id).localeCompare(String(a.id));
+        });
+
+        const filtered = sorted.filter(function (log) {
+          const ex = getExerciseById(log.exerciseId);
+          if (muscle !== 'all' && ex.muscle !== muscle) return false;
+          if (query) {
+            const hay = (ex.name + ' ' + ex.muscle + ' ' + (log.notes || '') + ' ' + log.date).toLowerCase();
+            if (hay.indexOf(query) === -1) return false;
+          }
+          return true;
+        });
+
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-500 py-8 text-center">لا توجد سجلات مطابقة للبحث.</div>';
+          return;
+        }
+
+        filtered.forEach(function (log) {
+          const ex = getExerciseById(log.exerciseId);
+          const row = document.createElement('div');
+          row.className = 'bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+          row.innerHTML =
+            '<div class="space-y-1">' +
+              '<div class="flex flex-wrap items-center gap-2">' +
+                '<span class="text-sm font-extrabold text-white">' + ex.name + '</span>' +
+                '<span class="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-emerald-400 font-bold">' + ex.muscle + '</span>' +
+                '<span class="text-[11px] text-slate-400 num-font">' + log.date + '</span>' +
+              '</div>' +
+              '<div class="text-xs text-slate-300 num-font">' +
+                'الوزن: <strong class="text-white">' + log.weight + ' ' + unit + '</strong> • العدات: <strong class="text-white">' + log.reps + '</strong> • الجولات: <strong class="text-white">' + log.sets + '</strong> • 1RM: <strong class="text-sky-400">' + calcEst1RM(log.weight, log.reps) + ' ' + unit + '</strong>' +
+              '</div>' +
+              (log.notes || log.rpe ? '<div class="text-[11px] text-slate-400">' + (log.rpe ? log.rpe : '') + (log.notes ? ' — ' + log.notes : '') + '</div>' : '') +
+            '</div>' +
+            '<div class="flex items-center gap-2 self-end sm:self-center">' +
+              '<button type="button" data-delete-id="' + log.id + '" class="delete-log-btn px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 text-xs font-bold transition">حذف</button>' +
+            '</div>';
+          container.appendChild(row);
+        });
+      }
+
+      // Switch Active Tab
+      function switchTab(tabName) {
+        activeTab = tabName;
+        const panels = document.querySelectorAll('.tab-panel');
+        panels.forEach(function (p) {
+          if (p.id === 'tab-' + tabName) {
+            p.classList.remove('hidden');
+          } else {
+            p.classList.add('hidden');
+          }
+        });
+
+        const tabBtns = document.querySelectorAll('.nav-tab-btn');
+        tabBtns.forEach(function (btn) {
+          if (btn.getAttribute('data-tab') === tabName) {
+            btn.classList.add('tab-active');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('tab-active');
+            btn.classList.add('text-slate-400');
+          }
+        });
+
+        if (tabName === 'progress') {
+          renderProgressChartAndTable();
+        } else if (tabName === 'overview') {
+          renderOverviewCards();
+        } else if (tabName === 'history') {
+          renderFullHistory();
+        }
+      }
+
+      // Master Re-render
+      function refreshAllUI(keepExerciseId) {
+        renderUnitLabels();
+        renderKPIs();
+        populateExerciseSelects(keepExerciseId);
+        updateSelectedExerciseBenchmark();
+        renderRecentLogsMiniList();
+        if (activeTab === 'progress') renderProgressChartAndTable();
+        if (activeTab === 'overview') renderOverviewCards();
+        if (activeTab === 'history') renderFullHistory();
+      }
+
+      // Rest Timer Functions
+      function formatTimer(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+      }
+
+      function updateTimerUI() {
+        document.getElementById('timerCountdownDisplay').textContent = formatTimer(timerRemainingSec);
+        const headerText = document.getElementById('headerTimerText');
+        if (timerIntervalId) {
+          headerText.textContent = formatTimer(timerRemainingSec);
+        } else {
+          headerText.textContent = 'مؤقت الراحة';
+        }
+      }
+
+      function stopRestTimer() {
+        if (timerIntervalId) {
+          clearInterval(timerIntervalId);
+          timerIntervalId = null;
+        }
+        document.getElementById('timerStartPauseBtn').textContent = 'بدء';
+        updateTimerUI();
+      }
+
+      function toggleStartPauseTimer() {
+        if (timerIntervalId) {
+          stopRestTimer();
+          return;
+        }
+        document.getElementById('timerStartPauseBtn').textContent = 'إيقاف مؤقت';
+        timerIntervalId = setInterval(function () {
+          if (timerRemainingSec > 0) {
+            timerRemainingSec--;
+            updateTimerUI();
+          } else {
+            stopRestTimer();
+            timerRemainingSec = timerDefaultSec;
+            updateTimerUI();
+            showToast('⏰ انتهى وقت الراحة! استعد للجولة القادمة 💪', 'pr');
+          }
+        }, 1000);
+        updateTimerUI();
+      }
+
+      // Initialize Event Listeners
+      function initEvents() {
+        // Set Today's Date
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('logDateInput').value = todayStr;
+
+        // Navigation Tabs
+        document.querySelectorAll('.nav-tab-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            switchTab(btn.getAttribute('data-tab'));
+          });
+        });
+
+        // Muscle Filter Pills on Tab 1
+        document.getElementById('muscleFilterPills').addEventListener('click', function (e) {
+          const pill = e.target.closest('.muscle-pill');
+          if (!pill) return;
+          activeMuscleFilter = pill.getAttribute('data-muscle');
+          document.querySelectorAll('.muscle-pill').forEach(function (p) {
+            if (p.getAttribute('data-muscle') === activeMuscleFilter) {
+              p.className = 'muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white';
+            } else {
+              p.className = 'muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700';
+            }
+          });
+          populateExerciseSelects();
+          updateSelectedExerciseBenchmark();
+        });
+
+        // Exercise select change
+        document.getElementById('exerciseSelect').addEventListener('change', function () {
+          const exId = this.value;
+          const exLogs = getLogsForExercise(exId);
+          if (exLogs.length > 0) {
+            const last = exLogs[exLogs.length - 1];
+            document.getElementById('weightInput').value = last.weight;
+            document.getElementById('repsInput').value = last.reps;
+            document.getElementById('setsInput').value = last.sets;
+          }
+          updateSelectedExerciseBenchmark();
+        });
+
+        // Stepper +/- Buttons
+        document.querySelectorAll('.stepper-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const targetId = btn.getAttribute('data-step-target');
+            const delta = Number(btn.getAttribute('data-step'));
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const current = Number(input.value) || 0;
+            const minVal = targetId === 'weightInput' ? 0 : 1;
+            const nextVal = Math.max(minVal, +(current + delta).toFixed(1));
+            input.value = nextVal;
+            updateLiveInputComparison();
+          });
+        });
+
+        ['weightInput', 'repsInput', 'setsInput'].forEach(function (id) {
+          document.getElementById(id).addEventListener('input', updateLiveInputComparison);
+        });
+
+        // Quick Inline Add Exercise Button
+        function handleQuickAddExercise() {
+          const nameInput = document.getElementById('quickExerciseNameInput');
+          const muscleSelect = document.getElementById('quickExerciseMuscleSelect');
+          const name = (nameInput.value || '').trim();
+          const muscle = muscleSelect.value || 'صدر';
+          if (!name) {
+            showToast('يرجى كتابة اسم التمرين أولاً في خانة الإضافة السريعة', 'warn');
+            nameInput.focus();
+            return null;
+          }
+          const newId = 'ex_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+          exercises.push({ id: newId, name: name, muscle: muscle });
+          saveState();
+          nameInput.value = '';
+          activeMuscleFilter = 'all';
+          document.querySelectorAll('.muscle-pill').forEach(function (p) {
+            if (p.getAttribute('data-muscle') === 'all') {
+              p.className = 'muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white';
+            } else {
+              p.className = 'muscle-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700';
+            }
+          });
+          refreshAllUI(newId);
+          showToast('✅ تمت إضافة تمرين: ' + name, 'ok');
+          return newId;
+        }
+
+        document.getElementById('quickAddExerciseBtn').addEventListener('click', function () {
+          handleQuickAddExercise();
+        });
+
+        // Delete currently selected exercise
+        document.getElementById('deleteSelectedExerciseBtn').addEventListener('click', function () {
+          const exId = document.getElementById('exerciseSelect').value;
+          if (!exId) {
+            showToast('لا يوجد تمرين محدد لحذفه', 'warn');
+            return;
+          }
+          const exName = getExerciseById(exId).name;
+          exercises = exercises.filter(function (e) { return e.id !== exId; });
+          logs = logs.filter(function (l) { return l.exerciseId !== exId; });
+          saveState();
+          refreshAllUI();
+          showToast('تم حذف تمرين: ' + exName, 'ok');
+        });
+
+        // Mobile Guide & Standalone HTML Download
+        const mobileGuideModal = document.getElementById('mobileGuideModal');
+        document.getElementById('openMobileGuideBtn').addEventListener('click', function () {
+          mobileGuideModal.classList.remove('hidden');
+        });
+        document.getElementById('closeMobileGuideBtn').addEventListener('click', function () {
+          mobileGuideModal.classList.add('hidden');
+        });
+        document.getElementById('doneMobileGuideBtn').addEventListener('click', function () {
+          mobileGuideModal.classList.add('hidden');
+        });
+        document.getElementById('downloadStandaloneHtmlBtn').addEventListener('click', function () {
+          const htmlSource = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+          const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'gym_weights_tracker.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('تم تحميل ملف الموقع بنجاح!', 'ok');
+        });
+
+        // Save Workout Button
+        document.getElementById('saveWorkoutBtn').addEventListener('click', function () {
+          let exId = document.getElementById('exerciseSelect').value;
+          const quickTypedName = (document.getElementById('quickExerciseNameInput').value || '').trim();
+          if (quickTypedName) {
+            exId = handleQuickAddExercise();
+          }
+          if (!exId) {
+            showToast('يرجى كتابة اسم تمرينك الجديد بالأعلى أولاً ثم حفظ الوزن', 'warn');
+            document.getElementById('quickExerciseNameInput').focus();
+            return;
+          }
+          const dateVal = document.getElementById('logDateInput').value || new Date().toISOString().split('T')[0];
+          const weightVal = Number(document.getElementById('weightInput').value);
+          const repsVal = Number(document.getElementById('repsInput').value);
+          const setsVal = Number(document.getElementById('setsInput').value);
+          const notesVal = document.getElementById('notesInput').value.trim();
+          const rpeVal = document.getElementById('rpeSelect').value;
+
+          if (!exId || isNaN(weightVal) || weightVal < 0 || isNaN(repsVal) || repsVal < 1) {
+            showToast('يرجى إدخال وزن وعدات صحيحة', 'warn');
+            return;
+          }
+
+          const prevLogs = getLogsForExercise(exId);
+          let prevMax = 0;
+          prevLogs.forEach(function (l) {
+            if (Number(l.weight) > prevMax) prevMax = Number(l.weight);
+          });
+
+          const newEntry = {
+            id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            exerciseId: exId,
+            date: dateVal,
+            weight: weightVal,
+            reps: repsVal,
+            sets: setsVal || 1,
+            rpe: rpeVal,
+            notes: notesVal
+          };
+
+          logs.push(newEntry);
+          saveState();
+          document.getElementById('notesInput').value = '';
+
+          const exName = getExerciseById(exId).name;
+          if (prevLogs.length > 0 && weightVal > prevMax) {
+            showToast('🏆 رقم قياسي جديد في ' + exName + ' (' + weightVal + ' ' + unit + ')!', 'pr');
+          } else {
+            showToast('✅ تم تسجيل ' + exName + ' بنجاح!', 'ok');
+          }
+
+          document.getElementById('chartExerciseSelect').value = exId;
+          refreshAllUI(exId);
+        });
+
+        // Jump to Chart Button
+        document.getElementById('jumpToChartBtn').addEventListener('click', function () {
+          const exId = document.getElementById('exerciseSelect').value;
+          document.getElementById('chartExerciseSelect').value = exId;
+          switchTab('progress');
+        });
+
+        // Chart Dropdowns
+        document.getElementById('chartExerciseSelect').addEventListener('change', renderProgressChartAndTable);
+        document.getElementById('chartMetricSelect').addEventListener('change', renderProgressChartAndTable);
+
+        // Overview Filter
+        document.getElementById('overviewMuscleFilter').addEventListener('change', renderOverviewCards);
+
+        // History Search & Filter & Delete
+        document.getElementById('historySearchInput').addEventListener('input', renderFullHistory);
+        document.getElementById('historyMuscleFilter').addEventListener('change', renderFullHistory);
+
+        document.getElementById('fullHistoryList').addEventListener('click', function (e) {
+          const delBtn = e.target.closest('.delete-log-btn');
+          if (!delBtn) return;
+          const logId = delBtn.getAttribute('data-delete-id');
+          logs = logs.filter(function (l) { return l.id !== logId; });
+          saveState();
+          refreshAllUI();
+          showToast('تم حذف السجل', 'ok');
+        });
+
+        // Unit Toggle
+        document.getElementById('unitToggleBtn').addEventListener('click', function () {
+          unit = unit === 'كجم' ? 'باوند' : 'كجم';
+          saveState();
+          refreshAllUI();
+          showToast('تم تغيير وحدة القياس إلى ' + unit, 'ok');
+        });
+
+        // Rest Timer Controls
+        document.getElementById('restTimerToggleBtn').addEventListener('click', function () {
+          const bar = document.getElementById('restTimerBar');
+          bar.classList.toggle('hidden');
+        });
+
+        document.querySelectorAll('.rest-preset-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            stopRestTimer();
+            timerDefaultSec = Number(btn.getAttribute('data-rest-sec')) || 90;
+            timerRemainingSec = timerDefaultSec;
+            updateTimerUI();
+          });
+        });
+
+        document.getElementById('timerStartPauseBtn').addEventListener('click', toggleStartPauseTimer);
+        document.getElementById('timerResetBtn').addEventListener('click', function () {
+          stopRestTimer();
+          timerRemainingSec = timerDefaultSec;
+          updateTimerUI();
+        });
+
+        // Custom Exercise Modal
+        const newExModal = document.getElementById('newExerciseModal');
+        function closeNewExModal() {
+          newExModal.classList.add('hidden');
+        }
+        document.getElementById('openNewExerciseModalBtn').addEventListener('click', function () {
+          newExModal.classList.remove('hidden');
+          document.getElementById('customExerciseNameInput').focus();
+        });
+        document.getElementById('closeNewExerciseModalBtn').addEventListener('click', closeNewExModal);
+        document.getElementById('cancelNewExerciseBtn').addEventListener('click', closeNewExModal);
+
+        document.getElementById('confirmNewExerciseBtn').addEventListener('click', function () {
+          const name = document.getElementById('customExerciseNameInput').value.trim();
+          const muscle = document.getElementById('customExerciseMuscleSelect').value;
+          if (!name) {
+            showToast('يرجى كتابة اسم التمرين', 'warn');
+            return;
+          }
+          const newId = 'custom_' + Date.now();
+          exercises.push({ id: newId, name: name, muscle: muscle });
+          saveState();
+          document.getElementById('customExerciseNameInput').value = '';
+          activeMuscleFilter = 'all';
+          closeNewExModal();
+          refreshAllUI(newId);
+          showToast('تمت إضافة تمرين: ' + name, 'ok');
+        });
+
+        // Export CSV
+        document.getElementById('exportCsvBtn').addEventListener('click', function () {
+          if (logs.length === 0) {
+            showToast('لا توجد بيانات لتصديرها', 'warn');
+            return;
+          }
+          const rows = [['التاريخ', 'التمرين', 'العضلة', 'الوزن (' + unit + ')', 'العدات', 'الجولات', '1RM التقديري', 'الشعور', 'ملاحظات']];
+          logs.forEach(function (l) {
+            const ex = getExerciseById(l.exerciseId);
+            rows.push([
+              l.date,
+              ex.name,
+              ex.muscle,
+              l.weight,
+              l.reps,
+              l.sets,
+              calcEst1RM(l.weight, l.reps),
+              l.rpe || '',
+              (l.notes || '').replace(/,/g, ' - ')
+            ]);
+          });
+          const csvContent = '\uFEFF' + rows.map(function (r) { return r.join(','); }).join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'gym_weights_log.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('تم تحميل ملف الجدول CSV بنجاح', 'ok');
+        });
+
+        // Load Demo Data
+        document.getElementById('loadDemoDataBtn').addEventListener('click', function () {
+          logs = buildDemoLogs();
+          saveState();
+          refreshAllUI();
+          showToast('تمت استعادة البيانات التجريبية', 'ok');
+        });
+
+        // Clear All Data Modal
+        const clearModal = document.getElementById('confirmClearModal');
+        document.getElementById('clearAllDataBtn').addEventListener('click', function () {
+          clearModal.classList.remove('hidden');
+        });
+        document.getElementById('cancelClearBtn').addEventListener('click', function () {
+          clearModal.classList.add('hidden');
+        });
+        document.getElementById('confirmClearBtn').addEventListener('click', function () {
+          logs = [];
+          exercises = [];
+          saveState();
+          clearModal.classList.add('hidden');
+          refreshAllUI();
+          showToast('تم مسح جميع التمارين والسجلات والبدء من الصفر', 'ok');
+        });
+      }
+
+      window.addEventListener('DOMContentLoaded', function () {
+        loadState();
+        initEvents();
+        refreshAllUI();
+      });
+    })();
+  </script>
+</body>
+</html>
